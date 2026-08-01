@@ -1,0 +1,824 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate"/>
+  <meta http-equiv="Pragma" content="no-cache"/>
+  <meta http-equiv="Expires" content="0"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Barbería Garage — Reservar cita</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Great+Vibes&display=swap');
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #0a0a0a; color: #f0f0f0; min-height: 100vh; }
+    .app { max-width: 480px; margin: 0 auto; padding-bottom: 3rem; }
+
+    /* HEADER */
+    .header { text-align: center; padding: 2.5rem 1rem 1.5rem; border-bottom: 1px solid #1e1e1e; }
+    .logo { font-family: 'Great Vibes', cursive; font-size: 52px; color: #f0f0f0; line-height: 1.1; }
+    .header-sub { font-size: 11px; color: #444; letter-spacing: 3px; text-transform: uppercase; margin-top: 6px; }
+
+    /* STEPS */
+    .steps { display: flex; justify-content: center; gap: 0; padding: 1rem 1rem 0; }
+    .step { flex: 1; text-align: center; position: relative; }
+    .step::after { content: ''; position: absolute; top: 12px; left: 50%; width: 100%; height: 1px; background: #2a2a2a; z-index: 0; }
+    .step:last-child::after { display: none; }
+    .step-num { width: 24px; height: 24px; border-radius: 50%; background: #1a1a1a; border: 1px solid #2a2a2a; color: #555; font-size: 11px; font-weight: 600; display: flex; align-items: center; justify-content: center; margin: 0 auto 4px; position: relative; z-index: 1; transition: all .2s ease; }
+    .step.active .step-num { background: #f0f0f0; color: #111; border-color: #f0f0f0; }
+    .step.done .step-num { background: #22c55e; color: #fff; border-color: #22c55e; }
+    .step-label { font-size: 10px; color: #555; text-transform: uppercase; letter-spacing: 0.04em; }
+    .step.active .step-label { color: #f0f0f0; }
+
+    /* SECTIONS */
+    .section { padding: 1.25rem 1rem 0; display: none; }
+    .section.active { display: block; animation: fadeIn .25s ease; }
+    @keyframes fadeIn { from{opacity:0; transform:translateY(6px);} to{opacity:1; transform:translateY(0);} }
+    .section-title { font-size: 16px; font-weight: 700; color: #f0f0f0; margin-bottom: 0.25rem; }
+    .section-sub { font-size: 13px; color: #555; margin-bottom: 1rem; }
+
+    /* SERVICIOS */
+    .servicios-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+    .srv-card { background: #1a1a1a; border: 1px solid #2a2a2a; border-radius: 10px; padding: 0.75rem; cursor: pointer; transition: all 0.15s; position: relative; }
+    .srv-card:active { transform: scale(0.98); }
+    .srv-card.selected { border-color: #f0f0f0; background: #222; }
+    .srv-nombre { font-size: 13px; font-weight: 600; color: #f0f0f0; padding-right: 16px; }
+    .srv-duracion { font-size: 11px; color: #555; margin-top: 3px; }
+    .info-btn { position: absolute; top: 8px; right: 8px; background: none; border: none; color: #f59e0b; font-size: 16px; cursor: pointer; padding: 2px 4px; line-height: 1; transition: all .15s ease; }
+    .info-btn:hover { color: #ffb84d; transform: scale(1.12); }
+    .srv-desc { margin-top: 7px; font-size: 11px; color: #999; line-height: 1.5; border-top: 1px solid #2a2a2a; padding-top: 7px; display: none; }
+    .srv-desc.open { display: block; }
+    .sep-label { grid-column: 1/-1; font-size: 11px; color: #444; text-transform: uppercase; letter-spacing: 0.05em; padding: 8px 0 2px; border-top: 1px solid #1e1e1e; margin-top: 4px; }
+    .loading-inline { grid-column: 1/-1; text-align: center; color: #444; font-size: 13px; padding: 1.5rem 0; }
+
+    /* FECHAS */
+    .fechas-row { display: flex; gap: 8px; overflow-x: auto; padding-bottom: 4px; scrollbar-width: none; }
+    .fechas-row::-webkit-scrollbar { display: none; }
+    .fecha-card { flex-shrink: 0; background: #1a1a1a; border: 1px solid #2a2a2a; border-radius: 10px; padding: 0.6rem 0.75rem; cursor: pointer; text-align: center; min-width: 60px; transition: all .15s ease; }
+    .fecha-card.selected { border-color: #f0f0f0; background: #222; }
+    .fecha-dia-num { font-size: 18px; font-weight: 700; color: #f0f0f0; }
+    .fecha-dia-nom { font-size: 10px; color: #555; text-transform: uppercase; }
+    .fecha-mes { font-size: 10px; color: #444; margin-top: 2px; }
+
+    /* BARBERO (paso de horario) - disimulado por defecto */
+    .barbero-toggle { font-size: 13px; color: #777; margin-bottom: 1rem; cursor: pointer; }
+    .toggle-link { color: #f0f0f0; text-decoration: underline; margin-left: 4px; }
+    .barb-chips { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 1rem; }
+    .barb-chip { padding: 6px 13px; border: 1px solid #2a2a2a; border-radius: 20px; background: #1a1a1a; color: #888; font-size: 12px; cursor: pointer; transition: all .15s ease; }
+    .barb-chip:active { transform: scale(0.96); }
+    .barb-chip.cualquiera.active { border-color: #f0f0f0; color: #f0f0f0; background: #222; font-weight: 600; }
+    .barb-chip.especial.active { border-color: #f59e0b; color: #f59e0b; background: #2a1f00; font-weight: 600; }
+
+    /* HORARIOS */
+    .horarios-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+    .hora-card { background: #1a1a1a; border: 1px solid #2a2a2a; border-radius: 8px; padding: 0.6rem; text-align: center; cursor: pointer; font-size: 13px; color: #f0f0f0; font-weight: 500; transition: all 0.15s; }
+    .hora-card:active { transform: scale(0.97); }
+    .hora-card.selected { border-color: #f0f0f0; background: #222; }
+    .no-disponible { text-align: center; padding: 2rem; color: #444; font-size: 14px; }
+
+    /* DATOS */
+    .fg { margin-bottom: 12px; }
+    .fl { font-size: 11px; color: #555; text-transform: uppercase; letter-spacing: 0.04em; margin-bottom: 5px; display: block; }
+    .fi { width: 100%; padding: 0.7rem 0.75rem; font-size: 14px; border: 1px solid #2a2a2a; border-radius: 8px; background: #1a1a1a; color: #f0f0f0; transition: border-color .15s ease; }
+    .fi:focus { outline: none; border-color: #555; }
+
+    /* RESUMEN */
+    .resumen-card { background: #1a1a1a; border: 1px solid #2a2a2a; border-radius: 12px; padding: 1rem; margin-bottom: 1rem; }
+    .res-row { display: flex; justify-content: space-between; padding: 5px 0; border-bottom: 1px solid #1e1e1e; font-size: 13px; }
+    .res-row:last-child { border-bottom: none; }
+    .res-lbl { color: #555; }
+    .res-val { color: #f0f0f0; font-weight: 600; }
+
+    /* BUTTONS */
+    .btn-primary { width: 100%; padding: 0.9rem; background: #f0f0f0; color: #111; border: none; border-radius: 12px; font-size: 15px; font-weight: 700; cursor: pointer; margin-top: 1rem; transition: all .15s ease; }
+    .btn-primary:hover:not(:disabled) { filter: brightness(1.06); }
+    .btn-primary:disabled { opacity: 0.2; cursor: not-allowed; }
+    .btn-secondary { width: 100%; padding: 0.7rem; background: none; color: #f0f0f0; border: 1px solid #2a2a2a; border-radius: 12px; font-size: 14px; cursor: pointer; margin-top: 8px; transition: all .15s ease; }
+    .btn-secondary:hover { border-color: #555; }
+
+    /* CONFIRMACION */
+    .confirmacion { display: none; flex-direction: column; align-items: center; text-align: center; padding: 3rem 1.5rem; animation: fadeIn .3s ease; }
+    .conf-icon { font-size: 56px; margin-bottom: 1rem; }
+    .conf-titulo { font-size: 22px; font-weight: 700; margin-bottom: 0.5rem; }
+    .conf-sub { font-size: 14px; color: #666; line-height: 1.6; margin-bottom: 2rem; }
+    .conf-card { background: #1a1a1a; border: 1px solid #2a2a2a; border-radius: 12px; padding: 1rem; width: 100%; margin-bottom: 1.5rem; text-align: left; }
+
+    /* PENDIENTE */
+    .pendiente-card { background: #1a1500; border: 1px solid #f59e0b; border-radius: 12px; padding: 1rem; text-align: center; margin-bottom: 1rem; }
+    .pendiente-titulo { font-size: 15px; font-weight: 700; color: #f59e0b; margin-bottom: 0.25rem; }
+    .pendiente-sub { font-size: 13px; color: #888; }
+
+    .loading { text-align: center; padding: 2rem; color: #444; font-size: 14px; }
+    .toast { position: fixed; bottom: 1.5rem; left: 50%; transform: translateX(-50%); background: #f0f0f0; color: #111; padding: 0.6rem 1.2rem; border-radius: 20px; font-size: 13px; z-index: 100; display: none; font-weight: 600; box-shadow: 0 6px 20px rgba(0,0,0,0.4); }
+  </style>
+</head>
+<body>
+<div class="app">
+  <div class="header">
+    <div class="logo">Barbería Garage</div>
+    <div class="header-sub">Agenda tu cita</div>
+  </div>
+
+  <!-- STEPS -->
+  <div class="steps">
+    <div class="step active" id="step-1"><div class="step-num">1</div><div class="step-label">Servicio</div></div>
+    <div class="step" id="step-2"><div class="step-num">2</div><div class="step-label">Fecha</div></div>
+    <div class="step" id="step-3"><div class="step-num">3</div><div class="step-label">Horario</div></div>
+    <div class="step" id="step-4"><div class="step-num">4</div><div class="step-label">Tus datos</div></div>
+    <div class="step" id="step-5"><div class="step-num">5</div><div class="step-label">Confirmar</div></div>
+  </div>
+
+  <!-- PASO 1: SERVICIO -->
+  <div class="section active" id="sec-1">
+    <div class="section-title">¿Qué servicio deseas?</div>
+    <div class="section-sub">Selecciona un servicio para comenzar</div>
+    <div class="servicios-grid" id="servicios-grid"><div class="loading-inline">Cargando servicios...</div></div>
+    <button class="btn-primary" id="btn-1" onclick="irPaso(2)" disabled>Continuar</button>
+  </div>
+
+  <!-- PASO 2: FECHA -->
+  <div class="section" id="sec-2">
+    <div class="section-title">¿Cuándo quieres venir?</div>
+    <div class="section-sub">Selecciona un día disponible</div>
+    <div class="fechas-row" id="fechas-row"></div>
+    <button class="btn-primary" id="btn-2" onclick="irPaso(3)" disabled style="margin-top:1rem">Continuar</button>
+    <button class="btn-secondary" onclick="irPaso(1)">← Regresar</button>
+  </div>
+
+  <!-- PASO 3: HORARIO + BARBERO -->
+  <div class="section" id="sec-3">
+    <div class="section-title">Elige tu horario</div>
+    <div class="section-sub" id="horarios-sub">Horarios disponibles</div>
+    <div class="barbero-toggle" id="barbero-toggle" onclick="mostrarBarberos()">¿Tienes un barbero de preferencia? <span class="toggle-link">Elegir</span></div>
+    <div class="barb-chips" id="barbero-chips" style="display:none"></div>
+    <div id="horarios-contenido"><div class="loading">Cargando horarios...</div></div>
+    <button class="btn-primary" id="btn-3" onclick="irPaso(4)" disabled style="margin-top:1rem">Continuar</button>
+    <button class="btn-secondary" onclick="irPaso(2)">← Regresar</button>
+  </div>
+
+  <!-- PASO 4: DATOS -->
+  <div class="section" id="sec-4">
+    <div class="section-title">Tus datos</div>
+    <div class="section-sub">Para confirmar tu cita</div>
+    <div class="fg"><label class="fl">Nombre completo</label><input class="fi" type="text" id="d-nombre" placeholder="Tu nombre" /></div>
+    <div class="fg">
+      <label class="fl">WhatsApp <span style="color:#ef4444">*</span></label>
+      <input class="fi" type="tel" id="d-telefono" placeholder="10 dígitos (obligatorio)" inputmode="numeric" required/>
+      <div style="font-size:11px;color:#f59e0b;margin-top:4px;">⚠️ Si tu cita no es aceptada te contactaremos por este número</div>
+    </div>
+    <div class="fg"><label class="fl">Comentario (opcional)</label><input class="fi" type="text" id="d-comentario" placeholder="Ej: llego 10 min tarde, alguna preferencia..." /></div>
+    <button class="btn-primary" onclick="irPaso(5)">Continuar</button>
+    <button class="btn-secondary" onclick="irPaso(3)">← Regresar</button>
+  </div>
+
+  <!-- PASO 5: RESUMEN -->
+  <div class="section" id="sec-5">
+    <div class="section-title">Confirma tu cita</div>
+    <div class="section-sub">Revisa los detalles antes de enviar</div>
+    <div class="pendiente-card">
+      <div class="pendiente-titulo">⏳ Sujeto a confirmación</div>
+      <div class="pendiente-sub">Tu cita quedará confirmada una vez que nuestro equipo la apruebe. Te avisaremos pronto.</div>
+    </div>
+    <div class="resumen-card" id="resumen-card"></div>
+    <button class="btn-primary" onclick="enviarSolicitud()">Enviar solicitud</button>
+    <button class="btn-secondary" onclick="irPaso(4)">← Regresar</button>
+  </div>
+
+  <!-- CONFIRMACION FINAL -->
+  <div class="confirmacion" id="confirmacion">
+    <div class="conf-icon">✅</div>
+    <div class="conf-titulo">¡Solicitud enviada!</div>
+    <div class="conf-sub">Tu solicitud fue recibida. Nuestro equipo la revisará y te confirmaremos a la brevedad.</div>
+    <div class="conf-card" id="conf-resumen"></div>
+    <a href="https://wa.me/522223961602" target="_blank" class="btn-primary" style="display:block;text-align:center;text-decoration:none;margin-top:1rem;background:#25d366;color:#fff;">💬 Contactar por WhatsApp</a>
+    <button class="btn-primary" onclick="reiniciar()" style="margin-top:8px;">Agendar otra cita</button>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<a href="https://wa.me/522223961602" target="_blank" style="position:fixed;bottom:1.5rem;right:1rem;background:#25d366;border-radius:30px;display:flex;align-items:center;gap:8px;padding:12px 18px;text-decoration:none;box-shadow:0 4px 12px rgba(37,211,102,.4);z-index:50;font-size:14px;font-weight:600;color:#fff;transition:transform .15s ease;" onmouseover="this.style.transform='scale(1.05)'" onmouseout="this.style.transform='scale(1)'">💬 Escríbenos por WhatsApp</a>
+
+<!-- ===== DEMO: FIRESTORE FALSO ===== -->
+<script>
+// ============================================================
+//  FIRESTORE FALSO (DEMO) — emula la API real de Firebase v10
+//  Lee/escribe datos en memoria. Persiste en localStorage del
+//  navegador (jamás toca la nube). Diseñado para reemplazar el
+//  import de firebase-firestore.js sin cambiar la lógica del app.
+// ============================================================
+(function(global){
+  "use strict";
+
+  const LS_KEY = "DEMO_BARBERIA_DB_v1";
+
+  // ---- Estado en memoria: { coleccion: { id: {campos...} } } ----
+  let STORE = {};
+  const listeners = []; // { colName|null, docId|null, filtros, cb, tipo:'col'|'doc' }
+
+  function nuevoId(){ return "id_" + Math.random().toString(36).slice(2,10) + Date.now().toString(36); }
+
+  // ---- Persistencia local (solo este navegador) ----
+  function guardar(){
+    try{ localStorage.setItem(LS_KEY, JSON.stringify(STORE)); }catch(e){ /* cuota llena: ignora */ }
+  }
+  function cargar(){
+    try{
+      const raw = localStorage.getItem(LS_KEY);
+      if(raw){ STORE = JSON.parse(raw); return true; }
+    }catch(e){}
+    return false;
+  }
+
+  // Permite sembrar datos iniciales (se llama desde el HTML del demo)
+  global.__DEMO_SEED__ = function(datosPorColeccion, forzar){
+    const yaHay = cargar();
+    if(yaHay && !forzar) return; // ya sembrado antes en este navegador
+    STORE = {};
+    for(const col in datosPorColeccion){
+      STORE[col] = {};
+      for(const item of datosPorColeccion[col]){
+        const id = item._id || nuevoId();
+        const copia = Object.assign({}, item); delete copia._id;
+        STORE[col][id] = copia;
+      }
+    }
+    guardar();
+  };
+  global.__DEMO_RESET__ = function(){ try{ localStorage.removeItem(LS_KEY); }catch(e){} location.reload(); };
+
+  // ---- Timestamp falso con .toMillis() y .toDate() ----
+  function TS(ms){
+    return { _ts:true, _ms:ms, toMillis(){ return this._ms; }, toDate(){ return new Date(this._ms); }, seconds:Math.floor(ms/1000) };
+  }
+
+  // ============================================================
+  //  Núcleo de consultas
+  // ============================================================
+  function pasaFiltros(data, filtros){
+    if(!filtros) return true;
+    for(const f of filtros){
+      const val = data[f.campo];
+      switch(f.op){
+        case "==": if(!(val === f.valor)) return false; break;
+        case ">=": if(!(val >= f.valor)) return false; break;
+        case "<=": if(!(val <= f.valor)) return false; break;
+        case ">":  if(!(val >  f.valor)) return false; break;
+        case "<":  if(!(val <  f.valor)) return false; break;
+        case "in": if(!(Array.isArray(f.valor) && f.valor.includes(val))) return false; break;
+        default: return false;
+      }
+    }
+    return true;
+  }
+
+  function docsDeColeccion(colName, filtros, orden){
+    const col = STORE[colName] || {};
+    let arr = Object.keys(col).map(id => ({ id, data: col[id] }));
+    arr = arr.filter(x => pasaFiltros(x.data, filtros));
+    if(orden){ arr.sort((a,b)=>{ const va=a.data[orden.campo], vb=b.data[orden.campo]; return (va>vb?1:va<vb?-1:0)*(orden.dir==="desc"?-1:1); }); }
+    return arr;
+  }
+
+  // Envuelve un doc-data como "docSnapshot" de Firebase
+  function wrapDocSnap(id, data){
+    return {
+      id,
+      exists(){ return data !== undefined && data !== null; },
+      data(){ return data ? Object.assign({}, data) : undefined; },
+    };
+  }
+  // Envuelve resultado de colección como "querySnapshot"
+  function wrapQuerySnap(arr){
+    const docs = arr.map(x => ({
+      id: x.id,
+      data(){ return Object.assign({}, x.data); },
+      exists(){ return true; },
+    }));
+    return {
+      docs,
+      empty: docs.length === 0,
+      size: docs.length,
+      forEach(cb){ docs.forEach(cb); },
+    };
+  }
+
+  // ============================================================
+  //  Disparo de listeners (simula tiempo real)
+  // ============================================================
+  function notificar(colName){
+    for(const L of listeners){
+      if(L.tipo === "col" && L.colName === colName){
+        const arr = docsDeColeccion(colName, L.filtros, L.orden);
+        try{ L.cb(wrapQuerySnap(arr)); }catch(e){ console.error("listener col",e); }
+      } else if(L.tipo === "doc" && L.colName === colName){
+        const data = (STORE[colName]||{})[L.docId];
+        try{ L.cb(wrapDocSnap(L.docId, data)); }catch(e){ console.error("listener doc",e); }
+      }
+    }
+  }
+
+  // ============================================================
+  //  API pública (mismos nombres que Firebase)
+  // ============================================================
+  function initializeApp(){ return {}; }
+  function getFirestore(){ return { _fake:true }; }
+
+  // Referencias ligeras
+  function collection(db, name){ return { _tipo:"col", name }; }
+  function doc(db, name, id){
+    // doc(collection(...))  -> primer arg es la colección
+    if(db && db._tipo === "col"){ return { _tipo:"doc", col:db.name, id:nuevoId() }; }
+    // doc(db, colRef)       -> segundo arg es la colección
+    if(name && name._tipo === "col"){ return { _tipo:"doc", col:name.name, id:nuevoId() }; }
+    // doc(db, "coleccion", "id")
+    return { _tipo:"doc", col:name, id: id!==undefined ? String(id) : nuevoId() };
+  }
+
+  function query(ref, ...clauses){
+    const filtros = []; let orden = null;
+    for(const c of clauses){
+      if(c && c._where) filtros.push(c._where);
+      if(c && c._order) orden = c._order;
+    }
+    return { _tipo:"query", col: ref.name || ref.col, filtros, orden };
+  }
+  function where(campo, op, valor){ return { _where:{ campo, op, valor } }; }
+  function orderBy(campo, dir){ return { _order:{ campo, dir: dir||"asc" } }; }
+
+  function _resolveColYFiltros(ref){
+    if(ref._tipo === "query") return { col: ref.col, filtros: ref.filtros, orden: ref.orden };
+    if(ref._tipo === "col")   return { col: ref.name, filtros: null, orden:null };
+    return { col: ref.col, filtros:null, orden:null };
+  }
+
+  async function getDocs(ref){
+    const { col, filtros, orden } = _resolveColYFiltros(ref);
+    return wrapQuerySnap(docsDeColeccion(col, filtros, orden));
+  }
+  async function getDoc(ref){ // ref es doc
+    const data = (STORE[ref.col]||{})[ref.id];
+    return wrapDocSnap(ref.id, data);
+  }
+
+  function onSnapshot(ref, cb, errCb){
+    if(ref._tipo === "doc"){
+      const L = { tipo:"doc", colName:ref.col, docId:ref.id, cb };
+      listeners.push(L);
+      // primer disparo inmediato
+      const data = (STORE[ref.col]||{})[ref.id];
+      setTimeout(()=>{ try{ cb(wrapDocSnap(ref.id, data)); }catch(e){ errCb&&errCb(e); } }, 0);
+      return ()=>{ const i=listeners.indexOf(L); if(i>=0) listeners.splice(i,1); };
+    }
+    const { col, filtros, orden } = _resolveColYFiltros(ref);
+    const L = { tipo:"col", colName:col, filtros, orden, cb };
+    listeners.push(L);
+    setTimeout(()=>{ try{ cb(wrapQuerySnap(docsDeColeccion(col, filtros, orden))); }catch(e){ errCb&&errCb(e); } }, 0);
+    return ()=>{ const i=listeners.indexOf(L); if(i>=0) listeners.splice(i,1); };
+  }
+
+  function _procesarCampos(obj){
+    // Reemplaza serverTimestamp() y deleteField() sentinels
+    const out = {};
+    for(const k in obj){
+      const v = obj[k];
+      if(v && v.__serverTs){ out[k] = TS(Date.now()); }
+      else if(v && v.__deleteField){ /* omitir => se elimina */ }
+      else out[k] = v;
+    }
+    return out;
+  }
+
+  async function addDoc(colRef, data){
+    const col = colRef.name;
+    if(!STORE[col]) STORE[col] = {};
+    const id = nuevoId();
+    STORE[col][id] = _procesarCampos(data);
+    guardar(); notificar(col);
+    return { id, _tipo:"doc", col, id2:id };
+  }
+  async function setDoc(docRef, data, opts){
+    const col = docRef.col;
+    if(!STORE[col]) STORE[col] = {};
+    if(opts && opts.merge && STORE[col][docRef.id]){
+      STORE[col][docRef.id] = Object.assign({}, STORE[col][docRef.id], _procesarCampos(data));
+    } else {
+      STORE[col][docRef.id] = _procesarCampos(data);
+    }
+    guardar(); notificar(col);
+  }
+  async function updateDoc(docRef, data){
+    const col = docRef.col;
+    if(!STORE[col]) STORE[col] = {};
+    const proc = {}; const borrar = [];
+    for(const k in data){
+      const v = data[k];
+      if(v && v.__deleteField) borrar.push(k);
+      else if(v && v.__serverTs) proc[k] = TS(Date.now());
+      else proc[k] = v;
+    }
+    STORE[col][docRef.id] = Object.assign({}, STORE[col][docRef.id]||{}, proc);
+    for(const k of borrar) delete STORE[col][docRef.id][k];
+    guardar(); notificar(col);
+  }
+  async function deleteDoc(docRef){
+    const col = docRef.col;
+    if(STORE[col]) delete STORE[col][docRef.id];
+    guardar(); notificar(col);
+  }
+
+  function serverTimestamp(){ return { __serverTs:true }; }
+  function deleteField(){ return { __deleteField:true }; }
+  function arrayUnion(...vals){ return { __arrayUnion:vals }; }
+
+  function writeBatch(){
+    const ops = []; const colsTocadas = new Set();
+    return {
+      set(ref, data, opts){ ops.push({t:"set", ref, data, opts}); },
+      update(ref, data){ ops.push({t:"update", ref, data}); },
+      delete(ref){ ops.push({t:"delete", ref}); },
+      async commit(){
+        for(const o of ops){
+          if(o.t==="set")    await setDoc(o.ref, o.data, o.opts);
+          if(o.t==="update") await updateDoc(o.ref, o.data);
+          if(o.t==="delete") await deleteDoc(o.ref);
+        }
+      }
+    };
+  }
+
+  // Exporta como el módulo de Firebase
+  global.__FAKE_FIREBASE__ = {
+    initializeApp, getFirestore, collection, doc, query, where, orderBy,
+    getDocs, getDoc, onSnapshot, addDoc, setDoc, updateDoc, deleteDoc,
+    serverTimestamp, deleteField, arrayUnion, writeBatch,
+  };
+})(window);
+
+</script>
+<script>
+  window.__DEMO_SEED__({"barberos": [{"_id": "b0", "nombre": "Edson", "inicio": "09:00", "fin": "20:30", "descanso": [3], "vip": true, "especial": false, "activo": true, "orden": 0, "cierreDesde": "15:00", "cierreDia": 6, "domingoEspecial": true, "domingoInicio": "12:00", "domingoFin": "17:00"}, {"_id": "b1", "nombre": "Ale", "inicio": "11:00", "fin": "20:00", "descanso": [0], "vip": false, "especial": false, "activo": true, "orden": 1}, {"_id": "b2", "nombre": "Noel", "inicio": "11:00", "fin": "20:00", "descanso": [1, 2], "vip": false, "especial": false, "activo": true, "orden": 2}, {"_id": "b3", "nombre": "Lupita", "inicio": "11:00", "fin": "20:00", "descanso": [3], "vip": false, "especial": false, "activo": true, "orden": 3}, {"_id": "b4", "nombre": "Yami", "inicio": "11:00", "fin": "20:00", "descanso": [], "vip": false, "especial": true, "activo": true, "orden": 4}], "servicios": [{"nombre": "Corte de cabello", "slots": 1, "esPaquete": false, "descripcion": "", "precio": null, "barberosPermitidos": [], "activo": true, "orden": 0}, {"nombre": "Arreglo de barba", "slots": 1, "esPaquete": false, "descripcion": "", "precio": null, "barberosPermitidos": [], "activo": true, "orden": 1}, {"nombre": "Facial exfoliante", "slots": 1, "esPaquete": false, "descripcion": "", "precio": null, "barberosPermitidos": [], "activo": true, "orden": 3}, {"nombre": "Limpieza de cejas", "slots": 1, "esPaquete": false, "descripcion": "", "precio": null, "barberosPermitidos": [], "activo": true, "orden": 6}, {"nombre": "Paq. VIP", "slots": 2, "esPaquete": true, "descripcion": "Corte, barba, mascarilla de carbón activado", "precio": null, "barberosPermitidos": [], "activo": true, "orden": 2}, {"nombre": "Paq. Barbón", "slots": 2, "esPaquete": true, "descripcion": "Corte + diseño y ritual de barba", "precio": null, "barberosPermitidos": [], "activo": true, "orden": 0}], "citas": [{"_id": "c0", "barbero": "Edson", "slot": "09:00", "tipo": "normal", "fecha": "2026-07-31", "nombre": "Mario Z.", "telefono": "5510645757", "servicio": "Paq. Plus+", "slots": 2, "comentario": "", "confirmado": true}, {"_id": "c1", "barbero": "Edson", "slot": "10:30", "tipo": "normal", "fecha": "2026-07-31", "nombre": "Roberto C.", "telefono": "5562284982", "servicio": "Corte de cabello", "slots": 1, "comentario": "", "confirmado": true}, {"_id": "c2", "barbero": "Edson", "slot": "11:30", "tipo": "normal", "fecha": "2026-07-31", "nombre": "Óscar Q.", "telefono": "5533705230", "servicio": "Retoque contorno", "slots": 1, "comentario": "", "confirmado": true}, {"_id": "c3", "barbero": "Edson", "slot": "12:30", "tipo": "normal", "fecha": "2026-07-31", "nombre": "Carlos M.", "telefono": "5531944804", "servicio": "Paq. VIP", "slots": 2, "comentario": "", "confirmado": true}, {"_id": "c4", "barbero": "Edson", "slot": "14:30", "tipo": "normal", "fecha": "2026-07-31", "nombre": "Gael O.", "telefono": "5593605443", "servicio": "Paq. Papi Chulo", "slots": 2, "comentario": "", "confirmado": true}, {"_id": "c5", "barbero": "Edson", "slot": "15:30", "tipo": "normal", "fecha": "2026-07-31", "nombre": "Adrián W.", "telefono": "5570572335", "servicio": "Arreglo de barba", "slots": 1, "comentario": "", "confirmado": true}, {"_id": "c6", "barbero": "Edson", "slot": "16:00", "tipo": "normal", "fecha": "2026-07-31", "nombre": "Héctor L.", "telefono": "5552574626", "servicio": "Paq. Papi Chulo", "slots": 2, "comentario": "", "confirmado": true}, {"_id": "c7", "barbero": "Edson", "slot": "18:00", "tipo": "normal", "fecha": "2026-07-31", "nombre": "Alan J.", "telefono": "5521981560", "servicio": "Paq. Barbón", "slots": 2, "comentario": "", "confirmado": true}, {"_id": "c8", "barbero": "Edson", "slot": "19:30", "tipo": "normal", "fecha": "2026-07-31", "nombre": "Jorge R.", "telefono": "5590389946", "servicio": "Limpieza de cejas", "slots": 1, "comentario": "", "confirmado": true}, {"_id": "c9", "barbero": "Ale", "slot": "12:00", "tipo": "normal", "fecha": "2026-07-31", "nombre": "Luis A.", "telefono": "5545559811", "servicio": "Paq. Papi Chulo", "slots": 2, "comentario": "", "confirmado": true}, {"_id": "c10", "barbero": "Ale", "slot": "14:30", "tipo": "normal", "fecha": "2026-07-31", "nombre": "Tadeo R.", "telefono": "5586645908", "servicio": "Facial exfoliante", "slots": 1, "comentario": "", "confirmado": true}, {"_id": "c11", "barbero": "Ale", "slot": "15:00", "tipo": "normal", "fecha": "2026-07-31", "nombre": "César M.", "telefono": "5585614924", "servicio": "Arreglo de barba", "slots": 1, "comentario": "", "confirmado": true}, {"_id": "c12", "barbero": "Ale", "slot": "15:30", "tipo": "normal", "fecha": "2026-07-31", "nombre": "Iván D.", "telefono": "5574342645", "servicio": "Paq. Papi Chulo", "slots": 2, "comentario": "", "confirmado": true}, {"_id": "c13", "barbero": "Ale", "slot": "16:30", "tipo": "normal", "fecha": "2026-07-31", "nombre": "Ricardo N.", "telefono": "5530493045", "servicio": "Paq. Barbón", "slots": 2, "comentario": "", "confirmado": true}, {"_id": "c14", "barbero": "Ale", "slot": "19:30", "tipo": "normal", "fecha": "2026-07-31", "nombre": "Diego S.", "telefono": "5561897483", "servicio": "Limpieza de cejas", "slots": 1, "comentario": "", "confirmado": true}, {"_id": "c15", "barbero": "Noel", "slot": "11:00", "tipo": "normal", "fecha": "2026-07-31", "nombre": "Bruno K.", "telefono": "5560953661", "servicio": "Retoque contorno", "slots": 1, "comentario": "", "confirmado": true}, {"_id": "c16", "barbero": "Noel", "slot": "13:00", "tipo": "normal", "fecha": "2026-07-31", "nombre": "Pablo T.", "telefono": "5576226807", "servicio": "Paq. VIP", "slots": 2, "comentario": "", "confirmado": true}, {"_id": "c17", "barbero": "Noel", "slot": "14:30", "tipo": "normal", "fecha": "2026-07-31", "nombre": "Leo S.", "telefono": "5595126183", "servicio": "Limpieza de cejas", "slots": 1, "comentario": "", "confirmado": true}, {"_id": "c18", "barbero": "Noel", "slot": "15:00", "tipo": "normal", "fecha": "2026-07-31", "nombre": "Andrés V.", "telefono": "5528743486", "servicio": "Paq. Papi Chulo", "slots": 2, "comentario": "", "confirmado": true}, {"_id": "c19", "barbero": "Noel", "slot": "16:30", "tipo": "normal", "fecha": "2026-07-31", "nombre": "Marco A.", "telefono": "5525162516", "servicio": "Paq. Plus+", "slots": 2, "comentario": "", "confirmado": true}, {"_id": "c20", "barbero": "Lupita", "slot": "11:00", "tipo": "normal", "fecha": "2026-07-31", "nombre": "Miguel H.", "telefono": "5516746236", "servicio": "Paq. Plus+", "slots": 2, "comentario": "", "confirmado": true}, {"_id": "c21", "barbero": "Lupita", "slot": "12:30", "tipo": "normal", "fecha": "2026-07-31", "nombre": "Fernando G.", "telefono": "5555694207", "servicio": "Paq. Barbón", "slots": 2, "comentario": "", "confirmado": true}, {"_id": "c22", "barbero": "Lupita", "slot": "14:00", "tipo": "normal", "fecha": "2026-07-31", "nombre": "Emilio B.", "telefono": "5577263235", "servicio": "Facial exfoliante", "slots": 1, "comentario": "", "confirmado": true}, {"_id": "c23", "barbero": "Lupita", "slot": "15:00", "tipo": "normal", "fecha": "2026-07-31", "nombre": "Sergio P.", "telefono": "5510503785", "servicio": "Arreglo de barba", "slots": 1, "comentario": "", "confirmado": true}, {"_id": "c24", "barbero": "Lupita", "slot": "16:00", "tipo": "normal", "fecha": "2026-07-31", "nombre": "Raúl F.", "telefono": "5583212829", "servicio": "Limpieza de cejas", "slots": 1, "comentario": "", "confirmado": true}, {"_id": "c25", "barbero": "Lupita", "slot": "16:30", "tipo": "normal", "fecha": "2026-07-31", "nombre": "Mario Z.", "telefono": "5592498138", "servicio": "Facial exfoliante", "slots": 1, "comentario": "", "confirmado": true}, {"_id": "c26", "barbero": "Lupita", "slot": "17:00", "tipo": "normal", "fecha": "2026-07-31", "nombre": "Roberto C.", "telefono": "5517504543", "servicio": "Corte de cabello", "slots": 1, "comentario": "", "confirmado": true}, {"_id": "c27", "barbero": "Lupita", "slot": "18:00", "tipo": "normal", "fecha": "2026-07-31", "nombre": "Óscar Q.", "telefono": "5530882893", "servicio": "Paq. Plus+", "slots": 2, "comentario": "", "confirmado": true}, {"_id": "c28", "barbero": "Lupita", "slot": "19:30", "tipo": "normal", "fecha": "2026-07-31", "nombre": "Carlos M.", "telefono": "5515780993", "servicio": "Limpieza de cejas", "slots": 1, "comentario": "", "confirmado": true}, {"_id": "c29", "barbero": "Yami", "slot": "11:00", "tipo": "normal", "fecha": "2026-07-31", "nombre": "Gael O.", "telefono": "5516698848", "servicio": "Retoque contorno", "slots": 1, "comentario": "", "confirmado": true}, {"_id": "c30", "barbero": "Yami", "slot": "12:00", "tipo": "normal", "fecha": "2026-07-31", "nombre": "Adrián W.", "telefono": "5562158519", "servicio": "Paq. Plus+", "slots": 2, "comentario": "", "confirmado": true}, {"_id": "c31", "barbero": "Yami", "slot": "13:00", "tipo": "normal", "fecha": "2026-07-31", "nombre": "Héctor L.", "telefono": "5556803677", "servicio": "Corte de cabello", "slots": 1, "comentario": "", "confirmado": true}, {"_id": "c32", "barbero": "Yami", "slot": "14:00", "tipo": "normal", "fecha": "2026-07-31", "nombre": "Alan J.", "telefono": "5530059063", "servicio": "Paq. VIP", "slots": 2, "comentario": "", "confirmado": true}, {"_id": "c33", "barbero": "Yami", "slot": "15:30", "tipo": "normal", "fecha": "2026-07-31", "nombre": "Jorge R.", "telefono": "5542596541", "servicio": "Paq. Plus+", "slots": 2, "comentario": "", "confirmado": true}, {"_id": "c34", "barbero": "Yami", "slot": "17:30", "tipo": "normal", "fecha": "2026-07-31", "nombre": "Luis A.", "telefono": "5521128642", "servicio": "Facial exfoliante", "slots": 1, "comentario": "", "confirmado": true}, {"_id": "c35", "barbero": "Yami", "slot": "19:00", "tipo": "normal", "fecha": "2026-07-31", "nombre": "Tadeo R.", "telefono": "5531879239", "servicio": "Retoque contorno", "slots": 1, "comentario": "", "confirmado": true}]}, false);
+</script>
+<script type="module">
+// ===== DEMO: variables desde el Firestore FALSO =====
+const FB = window.__FAKE_FIREBASE__;
+const initializeApp = FB.initializeApp, getFirestore = FB.getFirestore;
+const collection = FB.collection, addDoc = FB.addDoc, onSnapshot = FB.onSnapshot;
+const query = FB.query, where = FB.where, orderBy = FB.orderBy, getDocs = FB.getDocs;
+const doc = FB.doc, serverTimestamp = FB.serverTimestamp;
+
+const firebaseConfig = { projectId: "demo-local" };
+
+const app = initializeApp(firebaseConfig);
+const db = getFirestore(app);
+
+const DIAS_N = ['Domingo','Lunes','Martes','Miércoles','Jueves','Viernes','Sábado'];
+const DIAS_CORTO = ['Dom','Lun','Mar','Mié','Jue','Vie','Sáb'];
+const MESES = ['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'];
+const MESES_CORTO = ['ene','feb','mar','abr','may','jun','jul','ago','sep','oct','nov','dic'];
+
+function duracionLabel(slots){
+  return slots===1?'30 min':slots===2?'1 hora':slots===3?'1.5 horas':'2 horas';
+}
+
+function slotToMin(s){ const [h,m]=s.split(':').map(Number); return h*60+m; }
+function minToSlot(m){ return `${String(Math.floor(m/60)).padStart(2,'0')}:${m%60===0?'00':'30'}`; }
+function slot12hr(s){ const [h,m]=s.split(':').map(Number); const ap=h>=12?'PM':'AM'; const h12=h%12||12; return `${h12}:${m===0?'00':'30'} ${ap}`; }
+function getDateKey(d){ return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`; }
+function showToast(msg){ const t=document.getElementById('toast'); t.textContent=msg; t.style.display='block'; setTimeout(()=>t.style.display='none',2500); }
+
+// ---- Horarios efectivos (respetan cierre anticipado / domingo especial / excepciones) ----
+function inicioEfectivo(b, dia){
+  if (b.domingoEspecial && dia===0) return b.domingoInicio || b.inicio;
+  return b.inicio;
+}
+function cierreAplicaHoy(b, dia){
+  if (!b.cierreDesde) return false;
+  if (b.domingoEspecial && dia===0) return false;
+  if (b.cierreDia === undefined || b.cierreDia === null || b.cierreDia === '') return true;
+  return Number(b.cierreDia) === dia;
+}
+function finEfectivo(b, dia, ov){
+  if (b.domingoEspecial && dia===0) return b.domingoFin || b.fin;
+  if (cierreAplicaHoy(b, dia) && !(ov && ov.cierreAbierto)) return b.cierreDesde;
+  return b.fin;
+}
+function descansaHoy(b, dia, ov){
+  if (b.especial) return false;
+  const normal = (b.descanso||[]).includes(dia);
+  if (normal && ov && ov.trabaja) return false;
+  return normal;
+}
+
+let BARBEROS = [];
+let unsubBarberos = null;
+let SERVICIOS = [];
+let unsubServicios = null;
+
+let selServicio=null, selFecha=null, selSlot=null, selBarbero=null;
+let prefBarbero = 'cualquiera';
+let barberoExpandido = false;
+let pasoActual = 1;
+
+function escucharBarberos(){
+  if (unsubBarberos) unsubBarberos();
+  unsubBarberos = onSnapshot(query(collection(db,'barberos'), orderBy('orden')), snap => {
+    BARBEROS = snap.docs.map(d => ({ id:d.id, ...d.data() })).filter(b => b.activo !== false);
+    renderServiciosGrid();
+    renderFechas();
+    if (pasoActual === 3) { renderBarberoChips(); cargarHorarios(); }
+  });
+}
+
+function escucharServicios(){
+  if (unsubServicios) unsubServicios();
+  unsubServicios = onSnapshot(query(collection(db,'servicios'), orderBy('orden')), snap => {
+    SERVICIOS = snap.docs.map(d => ({ id:d.id, ...d.data() })).filter(s => s.activo !== false);
+    renderServiciosGrid();
+  });
+}
+
+// Mismo orden que en la Agenda interna: primer servicio, paquetes, resto de servicios, Ondulado al final
+function ordenarServicios(lista){
+  const paquetes = lista.filter(s => s.esPaquete).sort((a,b) => (a.orden||0)-(b.orden||0));
+  const individuales = lista.filter(s => !s.esPaquete && s.nombre!=='Ondulado').sort((a,b) => (a.orden||0)-(b.orden||0));
+  const ondulado = lista.filter(s => s.nombre==='Ondulado');
+  if (individuales.length <= 1) return [...individuales, ...paquetes, ...ondulado];
+  return [individuales[0], ...paquetes, ...individuales.slice(1), ...ondulado];
+}
+
+// ---- PASO 1: Servicios ----
+function renderServiciosGrid(){
+  const grid = document.getElementById('servicios-grid');
+  if (!SERVICIOS.length) { grid.innerHTML = '<div class="loading-inline">Cargando servicios...</div>'; return; }
+  const ordenados = ordenarServicios(SERVICIOS);
+  grid.innerHTML = '';
+  let sepPuesto = false;
+  const primerPaqueteIdx = ordenados.findIndex(s => s.esPaquete);
+  ordenados.forEach((s, i) => {
+    if (i === primerPaqueteIdx && !sepPuesto && primerPaqueteIdx !== -1) {
+      const sep = document.createElement('div'); sep.className='sep-label'; sep.textContent='Paquetes'; grid.appendChild(sep);
+      sepPuesto = true;
+    }
+    const descId = `desc-${s.id}`;
+    const tieneDesc = !!(s.descripcion && s.descripcion.trim());
+    const card = document.createElement('div'); card.className='srv-card';
+    card.innerHTML = `
+      ${tieneDesc ? `<button type="button" class="info-btn" onclick="event.stopPropagation(); toggleInfo('${descId}')" title="Ver qué incluye">ⓘ</button>` : ''}
+      <div class="srv-nombre">${s.nombre}</div>
+      <div class="srv-duracion">${duracionLabel(s.slots)}${s.precio?' · $'+s.precio:''}</div>
+      ${tieneDesc ? `<div class="srv-desc" id="${descId}">${s.descripcion}</div>` : ''}
+    `;
+    card.onclick = () => {
+      document.querySelectorAll('.srv-card').forEach(c => c.classList.remove('selected'));
+      card.classList.add('selected');
+      selServicio = s;
+      prefBarbero = 'cualquiera';
+      selSlot = null;
+      barberoExpandido = false;
+      document.getElementById('btn-1').disabled = false;
+    };
+    grid.appendChild(card);
+  });
+}
+
+// ---- PASO 2: Fechas ----
+function renderFechas(){
+  const fechasRow = document.getElementById('fechas-row');
+  fechasRow.innerHTML = '';
+  for (let i=0; i<14; i++){
+    const d = new Date(); d.setDate(d.getDate()+i); d.setHours(0,0,0,0);
+    const diaSem = d.getDay();
+    const hayBarbero = BARBEROS.some(b => !(!b.especial && (b.descanso||[]).includes(diaSem)));
+    const card = document.createElement('div'); card.className = 'fecha-card' + (hayBarbero ? '' : ' ocupado');
+    card.innerHTML = `<div class="fecha-dia-num">${d.getDate()}</div><div class="fecha-dia-nom">${DIAS_CORTO[diaSem]}</div><div class="fecha-mes">${MESES_CORTO[d.getMonth()]}</div>`;
+    if (hayBarbero) {
+      card.onclick = () => {
+        document.querySelectorAll('.fecha-card').forEach(c => c.classList.remove('selected'));
+        card.classList.add('selected');
+        selFecha = new Date(d); selSlot = null;
+        document.getElementById('btn-2').disabled = false;
+      };
+    } else {
+      card.style.opacity = '0.35'; card.style.cursor = 'not-allowed';
+    }
+    fechasRow.appendChild(card);
+  }
+}
+
+window.toggleInfo = function(id){
+  const el = document.getElementById(id);
+  document.querySelectorAll('.srv-desc.open').forEach(d => { if (d.id !== id) d.classList.remove('open'); });
+  el.classList.toggle('open');
+};
+
+// ---- PASO 3: Barbero + Horarios ----
+window.mostrarBarberos = function(){
+  barberoExpandido = true;
+  renderBarberoChips();
+};
+
+function renderBarberoChips(){
+  const cont = document.getElementById('barbero-chips');
+  const toggle = document.getElementById('barbero-toggle');
+  if (!selServicio) { cont.innerHTML=''; return; }
+  const candidatos = BARBEROS.filter(b => !selServicio.barberosPermitidos || selServicio.barberosPermitidos.length===0 || selServicio.barberosPermitidos.includes(b.nombre));
+  const expandir = barberoExpandido || prefBarbero!=='cualquiera';
+
+  if (!expandir) {
+    toggle.style.display = 'block';
+    toggle.innerHTML = '¿Tienes un barbero de preferencia? <span class="toggle-link">Elegir</span>';
+    cont.style.display = 'none';
+    cont.innerHTML = '';
+    return;
+  }
+
+  toggle.style.display = 'none';
+  cont.style.display = 'flex';
+  let html = `<div class="barb-chip cualquiera${prefBarbero==='cualquiera'?' active':''}" onclick="elegirBarbero('cualquiera')">Cualquiera</div>`;
+  candidatos.forEach(b => {
+    html += `<div class="barb-chip especial${prefBarbero===b.nombre?' active':''}" onclick="elegirBarbero('${b.nombre}')">${b.nombre}</div>`;
+  });
+  cont.innerHTML = html;
+}
+
+window.elegirBarbero = function(nombre){
+  prefBarbero = nombre;
+  selSlot = null;
+  document.getElementById('btn-3').disabled = true;
+  renderBarberoChips();
+  cargarHorarios();
+};
+
+async function cargarHorarios(){
+  if (!selFecha || !selServicio) return;
+  const cont = document.getElementById('horarios-contenido');
+  cont.innerHTML = '<div class="loading">Verificando disponibilidad...</div>';
+  document.getElementById('btn-3').disabled = true;
+
+  const key = getDateKey(selFecha);
+  const diaSem = selFecha.getDay();
+
+  const snapCitas = await getDocs(query(collection(db,'citas'), where('fecha','==',key)));
+  const citasDia = snapCitas.docs.map(d => ({ id:d.id, ...d.data() }));
+
+  const snapSol = await getDocs(query(collection(db,'solicitudes'), where('fecha','==',key), where('estado','in',['pendiente','aprobada'])));
+  const solicitudesDia = snapSol.docs.map(d => ({ id:d.id, ...d.data() }));
+
+  const snapOv = await getDocs(query(collection(db,'overrides'), where('fecha','==',key)));
+  const overridesHoy = {};
+  snapOv.docs.forEach(d => { overridesHoy[d.data().barbero] = d.data(); });
+
+  const slotsNecesarios = selServicio.slots;
+  const elegibleServicio = b => !selServicio.barberosPermitidos || selServicio.barberosPermitidos.length===0 || selServicio.barberosPermitidos.includes(b.nombre);
+  const candidatos = prefBarbero==='cualquiera'
+    ? BARBEROS.filter(b => elegibleServicio(b) && !b.soloDirecto)
+    : BARBEROS.filter(b => b.nombre===prefBarbero);
+
+  const slotsDisp = [];
+  const allSlots = [];
+  for (let m=9*60; m<=20*60; m+=30) allSlots.push(minToSlot(m));
+
+  const ahora = new Date();
+  const ahoraMin = ahora.getHours()*60 + ahora.getMinutes();
+  const esHoy = getDateKey(selFecha) === getDateKey(new Date());
+
+  // Ventana pública: Lun-Sáb 11:00am-8:00pm (última cita 7:30pm) · Domingo 12:00pm-5:00pm (última cita 4:30pm)
+  const esDomingo = diaSem === 0;
+  const pubInicio = esDomingo ? 12*60 : 11*60;
+  const pubUltimaHora = esDomingo ? 16*60+30 : 19*60+30;
+  const pubCierre = esDomingo ? 17*60 : 20*60;
+
+  allSlots.forEach(slot => {
+    const slotMin = slotToMin(slot);
+    if (slotMin < pubInicio) return;
+    if (slotMin + slotsNecesarios*30 > pubCierre) return;
+    if (slotMin > pubUltimaHora) return;
+    if (esHoy && slotMin <= ahoraMin) return;
+
+    const libre = candidatos.find(b => {
+      const ov = overridesHoy[b.nombre];
+      if (descansaHoy(b, diaSem, ov)) return false;
+      const ini = slotToMin(inicioEfectivo(b, diaSem));
+      const fin = slotToMin(finEfectivo(b, diaSem, ov));
+      if (slotMin < ini || slotMin + slotsNecesarios*30 > fin) return false;
+      for (let s=0; s<slotsNecesarios; s++) {
+        const checkMin = slotMin + s*30;
+        const ocupado = citasDia.some(c => c.barbero===b.nombre && checkMin>=slotToMin(c.slot) && checkMin<slotToMin(c.slot)+(c.slots||1)*30);
+        const reservado = solicitudesDia.some(c => c.barbero===b.nombre && checkMin>=slotToMin(c.slot) && checkMin<slotToMin(c.slot)+(c.slots||1)*30);
+        if (ocupado || reservado) return false;
+      }
+      return true;
+    });
+
+    if (libre) slotsDisp.push({ slot, barbero: libre.nombre });
+  });
+
+  if (!slotsDisp.length) {
+    const quien = prefBarbero==='cualquiera' ? '' : ` con ${prefBarbero}`;
+    cont.innerHTML = `<div class="no-disponible">😔 No hay horarios disponibles${quien} para este día.<br>Intenta con otra fecha${prefBarbero!=='cualquiera'?' o elige "Cualquiera"':''}.</div>`;
+    return;
+  }
+
+  document.getElementById('horarios-sub').textContent = `${slotsDisp.length} horarios disponibles`;
+  const hgrid = document.createElement('div'); hgrid.className = 'horarios-grid';
+  slotsDisp.forEach(({slot, barbero}) => {
+    const card = document.createElement('div'); card.className = 'hora-card';
+    card.textContent = slot12hr(slot);
+    card.onclick = () => {
+      document.querySelectorAll('.hora-card').forEach(c => c.classList.remove('selected'));
+      card.classList.add('selected');
+      selSlot = slot;
+      selBarbero = barbero;
+      document.getElementById('btn-3').disabled = false;
+    };
+    hgrid.appendChild(card);
+  });
+  cont.innerHTML = '';
+  cont.appendChild(hgrid);
+}
+
+window.irPaso = function(paso){
+  if (paso===5) {
+    const nombre = document.getElementById('d-nombre').value.trim();
+    const tel = document.getElementById('d-telefono').value.trim();
+    if (!nombre) { showToast('Ingresa tu nombre'); return; }
+    if (!tel || tel.length<10) { showToast('Ingresa tu número de WhatsApp'); return; }
+    renderResumen();
+  }
+  if (paso===3) { renderBarberoChips(); cargarHorarios(); }
+
+  pasoActual = paso;
+  for (let i=1; i<=5; i++) {
+    document.getElementById('sec-'+i).className = 'section' + (i===paso ? ' active' : '');
+    const stepEl = document.getElementById('step-'+i);
+    stepEl.className = 'step' + (i===paso ? ' active' : i<paso ? ' done' : '');
+  }
+};
+
+function renderResumen(){
+  const nombre = document.getElementById('d-nombre').value.trim();
+  const tel = document.getElementById('d-telefono').value.trim();
+  const com = document.getElementById('d-comentario').value.trim();
+  const d = selFecha;
+  document.getElementById('resumen-card').innerHTML = `
+    <div class="res-row"><span class="res-lbl">Servicio</span><span class="res-val">${selServicio.nombre}</span></div>
+    <div class="res-row"><span class="res-lbl">Duración</span><span class="res-val">${duracionLabel(selServicio.slots)}</span></div>
+    <div class="res-row"><span class="res-lbl">Fecha</span><span class="res-val">${DIAS_N[d.getDay()]} ${d.getDate()} de ${MESES[d.getMonth()]}</span></div>
+    <div class="res-row"><span class="res-lbl">Horario</span><span class="res-val">${slot12hr(selSlot)}</span></div>
+    <div class="res-row"><span class="res-lbl">Barbero</span><span class="res-val">${selBarbero}</span></div>
+    <div class="res-row"><span class="res-lbl">Nombre</span><span class="res-val">${nombre}</span></div>
+    ${tel?`<div class="res-row"><span class="res-lbl">Teléfono</span><span class="res-val">${tel}</span></div>`:''}
+    ${com?`<div class="res-row"><span class="res-lbl">Comentario</span><span class="res-val">${com}</span></div>`:''}
+  `;
+}
+
+window.enviarSolicitud = async function(){
+  const nombre = document.getElementById('d-nombre').value.trim();
+  const tel = document.getElementById('d-telefono').value.trim();
+  const com = document.getElementById('d-comentario').value.trim();
+  const d = selFecha;
+
+  try {
+    // DEMO / flujo nuevo: agenda DIRECTO como cita (sin aprobación)
+    await addDoc(collection(db,'citas'), {
+      nombre, telefono: tel, comentario: com,
+      servicio: selServicio.nombre, slots: selServicio.slots,
+      fecha: getDateKey(d), slot: selSlot,
+      barbero: selBarbero, tipo: 'normal', confirmado: true,
+      origen: 'reserva-web', ts: Date.now()
+    });
+
+    document.getElementById('conf-resumen').innerHTML = `
+      <div class="res-row"><span class="res-lbl">Servicio</span><span class="res-val">${selServicio.nombre}</span></div>
+      <div class="res-row"><span class="res-lbl">Fecha</span><span class="res-val">${DIAS_N[d.getDay()]} ${d.getDate()} de ${MESES[d.getMonth()]}</span></div>
+      <div class="res-row"><span class="res-lbl">Horario reservado</span><span class="res-val">${slot12hr(selSlot)}</span></div>
+      <div class="res-row"><span class="res-lbl">Barbero</span><span class="res-val">${selBarbero}</span></div>
+      <div class="res-row"><span class="res-lbl">Nombre</span><span class="res-val">${nombre}</span></div>
+    `;
+
+    for (let i=1; i<=5; i++) document.getElementById('sec-'+i).className = 'section';
+    document.getElementById('confirmacion').style.display = 'flex';
+    document.querySelector('.steps').style.display = 'none';
+
+  } catch(e) { showToast('Error al enviar. Intenta de nuevo.'); }
+};
+
+window.reiniciar = function(){
+  selServicio=null; selFecha=null; selSlot=null; selBarbero=null; prefBarbero='cualquiera'; barberoExpandido=false;
+  document.querySelectorAll('.srv-card').forEach(c => c.classList.remove('selected'));
+  document.querySelectorAll('.fecha-card').forEach(c => c.classList.remove('selected'));
+  document.getElementById('d-nombre').value = '';
+  document.getElementById('d-telefono').value = '';
+  document.getElementById('d-comentario').value = '';
+  document.getElementById('btn-1').disabled = true;
+  document.getElementById('btn-2').disabled = true;
+  document.getElementById('confirmacion').style.display = 'none';
+  document.querySelector('.steps').style.display = 'flex';
+  irPaso(1);
+};
+
+escucharBarberos();
+escucharServicios();
+</script>
+</body>
+</html>
